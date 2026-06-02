@@ -1,59 +1,40 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Markdown_Parser;
 using Markdown_Parser.dtos;
 
-class Program
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
 {
-    static void Main(string[] args)
+    options.AddPolicy("AllowAll",
+        policy => policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
+});
+
+var app = builder.Build();
+
+app.UseCors("AllowAll");
+
+app.MapPost("/api/parse", async (Microsoft.AspNetCore.Http.HttpContext context) =>
+{
+    using var reader = new StreamReader(context.Request.Body);
+    var content = await reader.ReadToEndAsync();
+    
+    try
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.InputEncoding = System.Text.Encoding.UTF8;
-
-        Console.WriteLine("=== PARSER FILE PROJECT_MAP.MD ===");
-
-        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        string filePath = Path.Combine(baseDir, "PROJECT_MAP.md");
-
-        Console.WriteLine($"Đang đọc file tại hệ thống đầu ra: {filePath}");
-
-        if (!File.Exists(filePath))
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"[LỖI] Không tìm thấy file PROJECT_MAP.md!");
-            Console.WriteLine("Vui lòng thực hiện Bước 2 bên dưới để cấu hình Copy file tự động.");
-            Console.ResetColor();
-            return;
-        }
-
-        try
-        {
-            ProjectBusinessMap result = ProjectMapParser.Parse(filePath);
-
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-
-            string jsonResult = JsonSerializer.Serialize(result, options);
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("\n--- SUCCESS ---");
-            Console.ResetColor();
-            Console.WriteLine(jsonResult);
-        }
-        catch (Exception ex)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"[ERROR]: {ex.Message}");
-            Console.ResetColor();
-        }
-
-        Console.WriteLine("\nPress any key to exit...");
-        Console.ReadKey();
+        var result = ProjectMapParser.ParseContent(content);
+        return Microsoft.AspNetCore.Http.Results.Ok(result);
     }
-}
+    catch (Exception ex)
+    {
+        return Microsoft.AspNetCore.Http.Results.BadRequest(new { error = ex.Message });
+    }
+});
 
-
+Console.WriteLine("Server is running on http://localhost:5000");
+app.Run("http://localhost:5000");

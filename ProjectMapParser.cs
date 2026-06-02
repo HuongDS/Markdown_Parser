@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -8,10 +8,20 @@ public class ProjectMapParser
 {
     public static ProjectBusinessMap Parse(string filePath)
     {
+        string[] lines = File.ReadAllLines(filePath);
+        return ParseLines(lines);
+    }
+
+    public static ProjectBusinessMap ParseContent(string content)
+    {
+        string[] lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        return ParseLines(lines);
+    }
+
+    private static ProjectBusinessMap ParseLines(string[] lines)
+    {
         var resultMap = new ProjectBusinessMap();
         BusinessFeature currentFeature = null;
-
-        string[] lines = File.ReadAllLines(filePath);
 
         foreach (string line in lines)
         {
